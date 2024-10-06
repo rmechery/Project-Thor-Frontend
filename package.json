@@ -12,6 +12,7 @@
     "@chatscope/chat-ui-kit-react": "^1.10.1",
     "@langchain/community": "^0.0.30",
     "@langchain/core": "^0.1.30",
+    "@langchain/ollama": "^0.1.0",
     "@langchain/openai": "^0.0.14",
     "@next/font": "13.1.6",
     "@supabase/auth-helpers-nextjs": "^0.7.2",

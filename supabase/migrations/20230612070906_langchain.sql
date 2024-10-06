@@ -6,7 +6,7 @@ create table documents (
   id bigserial primary key,
   content text, -- corresponds to Document.pageContent
   metadata jsonb, -- corresponds to Document.metadata
-  embedding vector(1536) -- 1536 works for OpenAI embeddings, change if needed
+  embedding vector(1024) -- 1536 works for OpenAI embeddings, change if needed
 );
 -- Set up Row Level Security (RLS)
 -- See https://supabase.com/docs/guides/auth/row-level-security for more details.
@@ -20,7 +20,7 @@ USING (true);
 
 -- Create a function to search for documents
 create function match_documents (
-  query_embedding vector(1536),
+  query_embedding vector(1024),
   match_count int default null,
   filter jsonb DEFAULT '{}'
 ) returns table (
