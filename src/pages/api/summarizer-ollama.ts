@@ -1,14 +1,15 @@
-import { OpenAI } from "@langchain/openai";
+import { Ollama } from "@langchain/ollama"; // Import Ollama LLM
 import { templates } from "./templates";
 import { LLMChain } from "langchain/chains";
 import { PromptTemplate } from "@langchain/core/prompts";
 import Bottleneck from "bottleneck";
 import { StructuredOutputParser } from "langchain/output_parsers";
 
-const llm = new OpenAI({
+// Use Ollama Llama3.2 model instead of OpenAI GPT-3.5 Turbo
+const llm = new Ollama({
   concurrency: 10,
   temperature: 0,
-  modelName: "gpt-3.5-turbo",
+  model: "llama3.2", // Specify the Ollama Llama3.2 model
 });
 
 const { summarizerTemplate, summarizerDocumentTemplate } = templates;

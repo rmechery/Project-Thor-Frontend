@@ -1,7 +1,7 @@
 import { CallbackManager } from "langchain/callbacks";
 import { LLMChain } from "langchain/chains";
-import { ChatOllama } from "langchain/chat_models/ollama";
-import { Ollama } from "@langchain/ollama";
+import { ChatOpenAI } from "langchain/chat_models/openai";
+import { OpenAI } from "@langchain/openai";
 import { PromptTemplate } from "langchain/prompts";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { summarizeLongDocument } from "./summarizer";
@@ -14,11 +14,8 @@ import { ConversationLog } from "./conversationLog";
 import { Metadata, getMatchesFromEmbeddings } from "./matches";
 import { templates } from "./templates";
 
-// Instantiate Ollama model with Llama 3.2
-
-const llm = new Ollama({
-  model:"llama3.2",
-  temperature: 0.1
+const llm = new OpenAI({
+  modelName: "gpt-3.5-turbo-0125"
 });
 
 const handleRequest = async ({
@@ -116,10 +113,10 @@ const handleRequest = async ({
         });
 
         let i = 0;
-        const chat = new ChatOllama({
-    //      streaming: true,
+        const chat = new ChatOpenAI({
+          streaming: true,
           verbose: true,
-          model: "llama3.2",
+          modelName: "gpt-3.5-turbo",
           callbackManager: CallbackManager.fromHandlers({
             async handleLLMNewToken(token) {
               await channel.send({
@@ -185,7 +182,7 @@ const handleRequest = async ({
     //@ts-ignore
     console.error(error);
     // @ts-ignore
-    console.error("Something went wrong with Ollama: ", error.message);
+    console.error("Something went wrong with OpenAI: ", error.message);
   }
 };
 

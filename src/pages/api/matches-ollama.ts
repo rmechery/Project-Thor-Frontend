@@ -1,5 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { OpenAIEmbeddings } from "@langchain/openai";
+import { OllamaEmbeddings } from "@langchain/ollama"; // Assuming Ollama provides embeddings
 import { SupabaseVectorStore } from "@langchain/community/vectorstores/supabase";
 
 export type Metadata = {
@@ -13,12 +13,16 @@ const getMatchesFromEmbeddings = async (
   client: SupabaseClient,
   topK: number
 ) => {
-  const embeddings = new OpenAIEmbeddings();
+  // Use Ollama embeddings
+  const embeddings = new OllamaEmbeddings({
+    model: "llama3.2",  // Specifying Ollama's Llama3.2 model for embeddings
+  });
 
   const store = new SupabaseVectorStore(embeddings, {
     client,
     tableName: "documents",
   });
+
   try {
     const queryResult = await store.similaritySearch(inquiry, topK);
     return (

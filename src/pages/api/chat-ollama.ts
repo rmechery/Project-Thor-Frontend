@@ -1,20 +1,25 @@
 import { CallbackManager } from "langchain/callbacks";
 import { LLMChain } from "langchain/chains";
-import { ChatOpenAI } from "langchain/chat_models/openai";
-import { OpenAI } from "@langchain/openai";
+import { ChatOllama } from "langchain/chat_models/ollama";
+import { Ollama } from "@langchain/ollama";
 import { PromptTemplate } from "langchain/prompts";
 import type { NextApiRequest, NextApiResponse } from "next";
-import { summarizeLongDocument } from "./summarizer-openai";
+import { summarizeLongDocument } from "./summarizer";
 import {
   createPagesServerClient,
   SupabaseClient,
 } from "@supabase/auth-helpers-nextjs";
 
 import { ConversationLog } from "./conversationLog";
-import { Metadata, getMatchesFromEmbeddings } from "./matches-openai";
+import { Metadata, getMatchesFromEmbeddings } from "./matches";
 import { templates } from "./templates";
 
-const llm = new OpenAI({});
+// Instantiate Ollama model with Llama 3.2
+
+const llm = new Ollama({
+  model:"llama3.2",
+  temperature: 0.1
+});
 
 const handleRequest = async ({
   prompt,
@@ -111,10 +116,10 @@ const handleRequest = async ({
         });
 
         let i = 0;
-        const chat = new ChatOpenAI({
-          streaming: true,
+        const chat = new ChatOllama({
+    //      streaming: true,
           verbose: true,
-          modelName: "gpt-3.5-turbo",
+          model: "llama3.2",
           callbackManager: CallbackManager.fromHandlers({
             async handleLLMNewToken(token) {
               await channel.send({
@@ -180,7 +185,7 @@ const handleRequest = async ({
     //@ts-ignore
     console.error(error);
     // @ts-ignore
-    console.error("Something went wrong with OpenAI: ", error.message);
+    console.error("Something went wrong with Ollama: ", error.message);
   }
 };
 

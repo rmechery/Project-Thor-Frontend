@@ -1,11 +1,11 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { Crawler, Page } from "crawler";
 import { Document } from "langchain/document";
-import { OpenAIEmbeddings } from "@langchain/openai";
+import { OllamaEmbeddings } from "@langchain/ollama"; // Importing Ollama Embeddings
 import { SupabaseVectorStore } from "@langchain/community/vectorstores/supabase";
 import { supabaseAdminClient } from "utils/supabaseAdmin";
 import { TokenTextSplitter } from "langchain/text_splitter";
-import { summarizeLongDocument } from "./summarizer-openai";
+import { summarizeLongDocument } from "./summarizer-ollama";
 
 // The TextEncoder instance enc is created and its encode() method is called on the input string.
 // The resulting Uint8Array is then sliced, and the TextDecoder instance decodes the sliced array in a single line of code.
@@ -31,7 +31,6 @@ export default async function handler(
     pages.map(async (row) => {
       // console.log(row);
       const splitter = new TokenTextSplitter({
-        encodingName: "gpt2",
         chunkSize: 300,
         chunkOverlap: 20,
       });
@@ -54,7 +53,9 @@ export default async function handler(
   );
 
   try {
-    const embeddings = new OpenAIEmbeddings();
+    const embeddings = new OllamaEmbeddings({
+      model: "llama3.2"
+    }); // Use OllamaEmbeddings instead of OpenAIEmbeddings
 
     const store = new SupabaseVectorStore(embeddings, {
       client: supabaseAdminClient,
