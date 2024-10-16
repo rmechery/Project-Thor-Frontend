@@ -4,7 +4,6 @@ const templates = {
         - The final answer must always be styled using markdown.
         - Your main goal is to point the user to the right source of information (the source is always a URL) based on the CONTEXT you are given.
         - Your secondary goal is to provide the user with an answer that is relevant to the question.
-        - Provide the user with a code example that is relevant to the question, if the context contains relevant code examples. Do not make up any code examples on your own.
         - Take into account the entire conversation so far, marked as CONVERSATION LOG, but prioritize the CONTEXT.
         - Based on the CONTEXT, choose the source that is most relevant to the QUESTION.
         - Do not make up any answers if the CONTEXT does not have relevant information.
@@ -28,9 +27,6 @@ const templates = {
 
         Final Answer: `,
   summarizerTemplate: `Shorten the text in the CONTENT, attempting to answer the INQUIRY You should follow the following rules when generating the summary:
-    - Any code found in the CONTENT should ALWAYS be preserved in the summary, unchanged.
-    - Code will be surrounded by backticks (\`) or triple backticks (\`\`\`).
-    - Summary should include code examples that are relevant to the INQUIRY, based on the content. Do not make up any code examples on your own.
     - The summary will answer the INQUIRY. If it cannot be answered, the summary should be empty, AND NO TEXT SHOULD BE RETURNED IN THE FINAL ANSWER AT ALL.
     - If the INQUIRY cannot be answered, the final answer should be empty.
     - The summary should be under 4000 characters.
@@ -42,9 +38,6 @@ const templates = {
     Final answer:
     `,
   summarizerDocumentTemplate: `Summarize the text in the CONTENT. You should follow the following rules when generating the summary:
-    - Any code found in the CONTENT should ALWAYS be preserved in the summary, unchanged.
-    - Code will be surrounded by backticks (\`) or triple backticks (\`\`\`).
-    - Summary should include code examples when possible. Do not make up any code examples on your own.
     - The summary should be under 4000 characters.
     - The summary should be at least 1500 characters long, if possible.
 

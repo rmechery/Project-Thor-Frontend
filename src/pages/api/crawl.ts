@@ -31,7 +31,7 @@ export default async function handler(
     pages.map(async (row) => {
       // console.log(row);
       const splitter = new TokenTextSplitter({
-        encodingName: "gpt2",
+       encodingName: "gpt2",
         chunkSize: 300,
         chunkOverlap: 20,
       });
