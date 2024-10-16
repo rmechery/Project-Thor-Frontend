@@ -14,6 +14,7 @@ import {
   MessageInput,
   ConversationHeader,
   TypingIndicator,
+  Button,
 } from "@chatscope/chat-ui-kit-react";
 import { supabaseBrowserClient } from "utils/supabaseBrowser";
 import { Auth } from "@supabase/auth-ui-react";
@@ -64,6 +65,10 @@ export default function Home() {
   const [botIsTyping, setBotIsTyping] = useState(false);
   const [statusMessage, setStatusMessage] = useState("Waiting for query...");
   const [userId, setUserId] = useState<string | undefined>();
+  // Function to sign the user out
+  const signOut = async () => {
+    await supabaseBrowserClient.auth.signOut()
+  };
 
   useEffect(() => {
     supabaseBrowserClient.auth.getSession().then(({ data: { session } }) => {
@@ -150,8 +155,16 @@ export default function Home() {
                   userName="ThorGPT"
                   info={statusMessage}
                 />
+                <ConversationHeader.Actions>
+                  <Button 
+                  style={{ padding: "0.25em" }}
+                   onClick={signOut} border>
+                    Sign Out
+                  </Button>
+                </ConversationHeader.Actions>
               </ConversationHeader>
-
+              
+            
               <MessageList
                 typingIndicator={
                   botIsTyping ? (
