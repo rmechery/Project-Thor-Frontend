@@ -5,6 +5,9 @@ To run this demo, you need to have:
 1. An OpenAI account. If you don't have one, you can sign up for free at [openai.com](https://www.openai.com).
 2. [Optional] A [Supabase account](https://app.supabase.io/register). Only needed if you want to use the hosted Supabase service.
 
+## `.env` Note
+To grab the .env file go to: [Google Drive Link](https://drive.google.com/drive/folders/1sdEnDH9pb2lWvhiTuz8H8wDrXKsc2zvy?usp=sharing) and change the file from to a .txt to a dotfile.
+
 ## Setup
 
 1. Clone this repository
