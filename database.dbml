@@ -1,0 +1,567 @@
+Enum "auth"."aal_level" {
+  "aal1"
+  "aal2"
+  "aal3"
+}
+
+Enum "auth"."code_challenge_method" {
+  "s256"
+  "plain"
+}
+
+Enum "auth"."factor_status" {
+  "unverified"
+  "verified"
+}
+
+Enum "auth"."factor_type" {
+  "totp"
+  "webauthn"
+}
+
+Table "auth"."audit_log_entries" {
+  "instance_id" uuid
+  "id" uuid [pk, not null]
+  "payload" json
+  "created_at" timestamptz
+  "ip_address" varchar(64) [not null, default: '']
+
+  Indexes {
+    instance_id [type: btree, name: "audit_logs_instance_id_idx"]
+  }
+  Note: 'Auth: Audit trail for user actions.'
+}
+
+Table "auth"."flow_state" {
+  "id" uuid [pk, not null]
+  "user_id" uuid
+  "auth_code" text [not null]
+  "code_challenge_method" auth.code_challenge_method [not null]
+  "code_challenge" text [not null]
+  "provider_type" text [not null]
+  "provider_access_token" text
+  "provider_refresh_token" text
+  "created_at" timestamptz
+  "updated_at" timestamptz
+  "authentication_method" text [not null]
+  "auth_code_issued_at" timestamptz
+
+  Indexes {
+    created_at [type: btree, name: "flow_state_created_at_idx"]
+    auth_code [type: btree, name: "idx_auth_code"]
+    (user_id, authentication_method) [type: btree, name: "idx_user_id_auth_method"]
+  }
+  Note: 'stores metadata for pkce logins'
+}
+
+Table "auth"."identities" {
+  "provider_id" text [not null]
+  "user_id" uuid [not null]
+  "identity_data" jsonb [not null]
+  "provider" text [not null]
+  "last_sign_in_at" timestamptz
+  "created_at" timestamptz
+  "updated_at" timestamptz
+  "email" text [note: 'Auth: Email is a generated column that references the optional email property in the identity_data']
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+
+  Indexes {
+    (provider_id, provider) [type: btree, name: "identities_provider_id_provider_unique"]
+    email [type: btree, name: "identities_email_idx"]
+    user_id [type: btree, name: "identities_user_id_idx"]
+  }
+  Note: 'Auth: Stores identities associated to a user.'
+}
+
+Table "auth"."instances" {
+  "id" uuid [pk, not null]
+  "uuid" uuid
+  "raw_base_config" text
+  "created_at" timestamptz
+  "updated_at" timestamptz
+  Note: 'Auth: Manages users across multiple sites.'
+}
+
+Table "auth"."mfa_amr_claims" {
+  "session_id" uuid [not null]
+  "created_at" timestamptz [not null]
+  "updated_at" timestamptz [not null]
+  "authentication_method" text [not null]
+  "id" uuid [pk, not null]
+
+  Indexes {
+    (session_id, authentication_method) [type: btree, name: "mfa_amr_claims_session_id_authentication_method_pkey"]
+  }
+  Note: 'auth: stores authenticator method reference claims for multi factor authentication'
+}
+
+Table "auth"."mfa_challenges" {
+  "id" uuid [pk, not null]
+  "factor_id" uuid [not null]
+  "created_at" timestamptz [not null]
+  "verified_at" timestamptz
+  "ip_address" inet [not null]
+
+  Indexes {
+    created_at [type: btree, name: "mfa_challenge_created_at_idx"]
+  }
+  Note: 'auth: stores metadata about challenge requests made'
+}
+
+Table "auth"."mfa_factors" {
+  "id" uuid [pk, not null]
+  "user_id" uuid [not null]
+  "friendly_name" text
+  "factor_type" auth.factor_type [not null]
+  "status" auth.factor_status [not null]
+  "created_at" timestamptz [not null]
+  "updated_at" timestamptz [not null]
+  "secret" text
+
+  Indexes {
+    (friendly_name, user_id) [type: btree, name: "mfa_factors_user_friendly_name_unique"]
+    (user_id, created_at) [type: btree, name: "factor_id_created_at_idx"]
+    user_id [type: btree, name: "mfa_factors_user_id_idx"]
+  }
+  Note: 'auth: stores metadata about factors'
+}
+
+Table "auth"."refresh_tokens" {
+  "instance_id" uuid
+  "id" int8 [pk, not null, increment]
+  "token" varchar(255) [unique]
+  "user_id" varchar(255)
+  "revoked" bool
+  "created_at" timestamptz
+  "updated_at" timestamptz
+  "parent" varchar(255)
+  "session_id" uuid
+
+  Indexes {
+    instance_id [type: btree, name: "refresh_tokens_instance_id_idx"]
+    (instance_id, user_id) [type: btree, name: "refresh_tokens_instance_id_user_id_idx"]
+    parent [type: btree, name: "refresh_tokens_parent_idx"]
+    (session_id, revoked) [type: btree, name: "refresh_tokens_session_id_revoked_idx"]
+    updated_at [type: btree, name: "refresh_tokens_updated_at_idx"]
+  }
+  Note: 'Auth: Store of tokens used to refresh JWT tokens once they expire.'
+}
+
+Table "auth"."saml_providers" {
+  "id" uuid [pk, not null]
+  "sso_provider_id" uuid [not null]
+  "entity_id" text [unique, not null]
+  "metadata_xml" text [not null]
+  "metadata_url" text
+  "attribute_mapping" jsonb
+  "created_at" timestamptz
+  "updated_at" timestamptz
+  "name_id_format" text
+
+  Indexes {
+    sso_provider_id [type: btree, name: "saml_providers_sso_provider_id_idx"]
+  }
+  Note: 'Auth: Manages SAML Identity Provider connections.'
+}
+
+Table "auth"."saml_relay_states" {
+  "id" uuid [pk, not null]
+  "sso_provider_id" uuid [not null]
+  "request_id" text [not null]
+  "for_email" text
+  "redirect_to" text
+  "created_at" timestamptz
+  "updated_at" timestamptz
+  "flow_state_id" uuid
+
+  Indexes {
+    created_at [type: btree, name: "saml_relay_states_created_at_idx"]
+    for_email [type: btree, name: "saml_relay_states_for_email_idx"]
+    sso_provider_id [type: btree, name: "saml_relay_states_sso_provider_id_idx"]
+  }
+  Note: 'Auth: Contains SAML Relay State information for each Service Provider initiated login.'
+}
+
+Table "auth"."schema_migrations" {
+  "version" varchar(255) [pk, not null]
+  Note: 'Auth: Manages updates to the auth system.'
+}
+
+Table "auth"."sessions" {
+  "id" uuid [pk, not null]
+  "user_id" uuid [not null]
+  "created_at" timestamptz
+  "updated_at" timestamptz
+  "factor_id" uuid
+  "aal" auth.aal_level
+  "not_after" timestamptz [note: 'Auth: Not after is a nullable column that contains a timestamp after which the session should be regarded as expired.']
+  "refreshed_at" timestamp
+  "user_agent" text
+  "ip" inet
+  "tag" text
+
+  Indexes {
+    not_after [type: btree, name: "sessions_not_after_idx"]
+    user_id [type: btree, name: "sessions_user_id_idx"]
+    (user_id, created_at) [type: btree, name: "user_id_created_at_idx"]
+  }
+  Note: 'Auth: Stores session data associated to a user.'
+}
+
+Table "auth"."sso_domains" {
+  "id" uuid [pk, not null]
+  "sso_provider_id" uuid [not null]
+  "domain" text [not null]
+  "created_at" timestamptz
+  "updated_at" timestamptz
+
+  Indexes {
+    sso_provider_id [type: btree, name: "sso_domains_sso_provider_id_idx"]
+  }
+  Note: 'Auth: Manages SSO email address domain mapping to an SSO Identity Provider.'
+}
+
+Table "auth"."sso_providers" {
+  "id" uuid [pk, not null]
+  "resource_id" text [note: 'Auth: Uniquely identifies a SSO provider according to a user-chosen resource ID (case insensitive), useful in infrastructure as code.']
+  "created_at" timestamptz
+  "updated_at" timestamptz
+  Note: 'Auth: Manages SSO identity provider information; see saml_providers for SAML.'
+}
+
+Table "auth"."users" {
+  "instance_id" uuid
+  "id" uuid [pk, not null]
+  "aud" varchar(255)
+  "role" varchar(255)
+  "email" varchar(255) [unique]
+  "encrypted_password" varchar(255)
+  "email_confirmed_at" timestamptz
+  "invited_at" timestamptz
+  "confirmation_token" varchar(255) [unique]
+  "confirmation_sent_at" timestamptz
+  "recovery_token" varchar(255) [unique]
+  "recovery_sent_at" timestamptz
+  "email_change_token_new" varchar(255) [unique]
+  "email_change" varchar(255)
+  "email_change_sent_at" timestamptz
+  "last_sign_in_at" timestamptz
+  "raw_app_meta_data" jsonb
+  "raw_user_meta_data" jsonb
+  "is_super_admin" bool
+  "created_at" timestamptz
+  "updated_at" timestamptz
+  "phone" text [unique, default: `NULL::character varying`]
+  "phone_confirmed_at" timestamptz
+  "phone_change" text [default: '']
+  "phone_change_token" varchar(255) [default: '']
+  "phone_change_sent_at" timestamptz
+  "confirmed_at" timestamptz
+  "email_change_token_current" varchar(255) [unique, default: '']
+  "email_change_confirm_status" int2 [default: 0]
+  "banned_until" timestamptz
+  "reauthentication_token" varchar(255) [unique, default: '']
+  "reauthentication_sent_at" timestamptz
+  "is_sso_user" bool [not null, default: false, note: 'Auth: Set this column to true when the account comes from SSO. These accounts can have duplicate emails.']
+  "deleted_at" timestamptz
+  "is_anonymous" bool [not null, default: false]
+
+  Indexes {
+    (instance_id, `lower((email)::text)`) [type: btree, name: "users_instance_id_email_idx"]
+    instance_id [type: btree, name: "users_instance_id_idx"]
+    is_anonymous [type: btree, name: "users_is_anonymous_idx"]
+  }
+  Note: 'Auth: Stores user login data within a secure schema.'
+}
+
+Enum "net"."request_status" {
+  "PENDING"
+  "SUCCESS"
+  "ERROR"
+}
+
+Table "net"."_http_response" {
+  "id" int8
+  "status_code" int4
+  "content_type" text
+  "headers" jsonb
+  "content" text
+  "timed_out" bool
+  "error_msg" text
+  "created" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    created [type: btree, name: "_http_response_created_idx"]
+  }
+}
+
+Table "net"."http_request_queue" {
+  "id" int8 [not null, increment]
+  "method" text [not null]
+  "url" text [not null]
+  "headers" jsonb [not null]
+  "body" bytea
+  "timeout_milliseconds" int4 [not null]
+}
+
+Enum "pgsodium"."key_status" {
+  "default"
+  "valid"
+  "invalid"
+  "expired"
+}
+
+Enum "pgsodium"."key_type" {
+  "aead-ietf"
+  "aead-det"
+  "hmacsha512"
+  "hmacsha256"
+  "auth"
+  "shorthash"
+  "generichash"
+  "kdf"
+  "secretbox"
+  "secretstream"
+  "stream_xchacha20"
+}
+
+Table "pgsodium"."key" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "status" pgsodium.key_status [unique, default: 'valid']
+  "created" timestamptz [not null, default: `CURRENT_TIMESTAMP`]
+  "expires" timestamptz
+  "key_type" pgsodium.key_type
+  "key_id" int8 [increment]
+  "key_context" bytea [default: '\x7067736f6469756d']
+  "name" text [unique]
+  "associated_data" text [default: 'associated']
+  "raw_key" bytea
+  "raw_key_nonce" bytea
+  "parent_key" uuid
+  "comment" text
+  "user_data" text
+
+  Indexes {
+    (key_id, key_context, key_type) [type: btree, name: "key_key_id_key_context_key_type_idx"]
+    status [type: btree, name: "key_status_idx"]
+  }
+  Note: 'This table holds metadata for derived keys given a key_id and key_context. The raw key is never stored.'
+}
+
+Enum "speaker" {
+  "user"
+  "ai"
+}
+
+Table "conversations" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" uuid [not null]
+  "entry" text
+  "speaker" speaker [not null]
+  "created_at" timestamptz [not null, default: `timezone('utc'::text, now())`]
+}
+
+Table "documents" {
+  "id" int8 [pk, not null, increment]
+  "content" text
+  "metadata" jsonb
+  "embedding" public.vector
+}
+
+Ref "identities_user_id_fkey":"auth"."users"."id" < "auth"."identities"."user_id" [delete: cascade]
+
+Ref "mfa_amr_claims_session_id_fkey":"auth"."sessions"."id" < "auth"."mfa_amr_claims"."session_id" [delete: cascade]
+
+Ref "mfa_challenges_auth_factor_id_fkey":"auth"."mfa_factors"."id" < "auth"."mfa_challenges"."factor_id" [delete: cascade]
+
+Ref "mfa_factors_user_id_fkey":"auth"."users"."id" < "auth"."mfa_factors"."user_id" [delete: cascade]
+
+Ref "refresh_tokens_session_id_fkey":"auth"."sessions"."id" < "auth"."refresh_tokens"."session_id" [delete: cascade]
+
+Ref "saml_providers_sso_provider_id_fkey":"auth"."sso_providers"."id" < "auth"."saml_providers"."sso_provider_id" [delete: cascade]
+
+Ref "saml_relay_states_flow_state_id_fkey":"auth"."flow_state"."id" < "auth"."saml_relay_states"."flow_state_id" [delete: cascade]
+
+Ref "saml_relay_states_sso_provider_id_fkey":"auth"."sso_providers"."id" < "auth"."saml_relay_states"."sso_provider_id" [delete: cascade]
+
+Ref "sessions_user_id_fkey":"auth"."users"."id" < "auth"."sessions"."user_id" [delete: cascade]
+
+Ref "sso_domains_sso_provider_id_fkey":"auth"."sso_providers"."id" < "auth"."sso_domains"."sso_provider_id" [delete: cascade]
+
+Ref "conversations_user_id_fkey":"auth"."users"."id" < "conversations"."user_id"
+
+Ref "broadcasts_channel_id_fkey":"realtime"."channels"."id" < "realtime"."broadcasts"."channel_id" [delete: cascade]
+
+Ref "presences_channel_id_fkey":"realtime"."channels"."id" < "realtime"."presences"."channel_id" [delete: cascade]
+
+Ref "objects_bucketId_fkey":"storage"."buckets"."id" < "storage"."objects"."bucket_id"
+
+Ref "s3_multipart_uploads_bucket_id_fkey":"storage"."buckets"."id" < "storage"."s3_multipart_uploads"."bucket_id"
+
+Ref "s3_multipart_uploads_parts_bucket_id_fkey":"storage"."buckets"."id" < "storage"."s3_multipart_uploads_parts"."bucket_id"
+
+Ref "s3_multipart_uploads_parts_upload_id_fkey":"storage"."s3_multipart_uploads"."id" < "storage"."s3_multipart_uploads_parts"."upload_id" [delete: cascade]
+
+Enum "realtime"."action" {
+  "INSERT"
+  "UPDATE"
+  "DELETE"
+  "TRUNCATE"
+  "ERROR"
+}
+
+Enum "realtime"."equality_op" {
+  "eq"
+  "neq"
+  "lt"
+  "lte"
+  "gt"
+  "gte"
+  "in"
+}
+
+Table "realtime"."broadcasts" {
+  "id" int8 [pk, not null, increment]
+  "channel_id" int8 [unique, not null]
+  "inserted_at" timestamp [not null]
+  "updated_at" timestamp [not null]
+}
+
+Table "realtime"."channels" {
+  "id" int8 [pk, not null, increment]
+  "name" varchar(255) [unique, not null]
+  "inserted_at" timestamp [not null]
+  "updated_at" timestamp [not null]
+}
+
+Table "realtime"."presences" {
+  "id" int8 [pk, not null, increment]
+  "channel_id" int8 [unique, not null]
+  "inserted_at" timestamp [not null]
+  "updated_at" timestamp [not null]
+}
+
+Table "realtime"."schema_migrations" {
+  "version" int8 [pk, not null]
+  "inserted_at" timestamp
+}
+
+Table "realtime"."subscription" {
+  "id" int8 [pk, not null, increment]
+  "subscription_id" uuid [not null]
+  "entity" regclass [not null]
+  "filters" "user_defined_filter[]" [not null, default: 'ARRAY[realtime.user_defined_filter[]']
+  "claims" jsonb [not null]
+  "claims_role" regrole [not null]
+  "created_at" timestamp [not null, default: `timezone('utc'::text, now())`]
+
+  Indexes {
+    (subscription_id, entity, filters) [type: btree, name: "subscription_subscription_id_entity_filters_key"]
+    entity [type: hash, name: "ix_realtime_subscription_entity"]
+  }
+}
+
+Table "storage"."buckets" {
+  "id" text [pk, not null]
+  "name" text [unique, not null]
+  "owner" uuid [note: 'Field is deprecated, use owner_id instead']
+  "created_at" timestamptz [default: `now()`]
+  "updated_at" timestamptz [default: `now()`]
+  "public" bool [default: false]
+  "avif_autodetection" bool [default: false]
+  "file_size_limit" int8
+  "allowed_mime_types" "text[]"
+  "owner_id" text
+}
+
+Table "storage"."migrations" {
+  "id" int4 [pk, not null]
+  "name" varchar(100) [unique, not null]
+  "hash" varchar(40) [not null]
+  "executed_at" timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table "storage"."objects" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "bucket_id" text
+  "name" text
+  "owner" uuid [note: 'Field is deprecated, use owner_id instead']
+  "created_at" timestamptz [default: `now()`]
+  "updated_at" timestamptz [default: `now()`]
+  "last_accessed_at" timestamptz [default: `now()`]
+  "metadata" jsonb
+  "path_tokens" "text[]"
+  "version" text
+  "owner_id" text
+
+  Indexes {
+    (bucket_id, name) [type: btree, name: "bucketid_objname"]
+    (bucket_id, name) [type: btree, name: "idx_objects_bucket_id_name"]
+    name [type: btree, name: "name_prefix_search"]
+  }
+}
+
+Table "storage"."s3_multipart_uploads" {
+  "id" text [pk, not null]
+  "in_progress_size" int8 [not null, default: 0]
+  "upload_signature" text [not null]
+  "bucket_id" text [not null]
+  "key" text [not null]
+  "version" text [not null]
+  "owner_id" text
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (bucket_id, key, created_at) [type: btree, name: "idx_multipart_uploads_list"]
+  }
+}
+
+Table "storage"."s3_multipart_uploads_parts" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "upload_id" text [not null]
+  "size" int8 [not null, default: 0]
+  "part_number" int4 [not null]
+  "bucket_id" text [not null]
+  "key" text [not null]
+  "etag" text [not null]
+  "owner_id" text
+  "version" text [not null]
+  "created_at" timestamptz [not null, default: `now()`]
+}
+
+Table "supabase_functions"."hooks" {
+  "id" int8 [pk, not null, increment]
+  "hook_table_id" int4 [not null]
+  "hook_name" text [not null]
+  "created_at" timestamptz [not null, default: `now()`]
+  "request_id" int8
+
+  Indexes {
+    (hook_table_id, hook_name) [type: btree, name: "supabase_functions_hooks_h_table_id_h_name_idx"]
+    request_id [type: btree, name: "supabase_functions_hooks_request_id_idx"]
+  }
+  Note: 'Supabase Functions Hooks: Audit trail for triggered hooks.'
+}
+
+Table "supabase_functions"."migrations" {
+  "version" text [pk, not null]
+  "inserted_at" timestamptz [not null, default: `now()`]
+}
+
+Table "supabase_migrations"."schema_migrations" {
+  "version" text [pk, not null]
+  "statements" "text[]"
+  "name" text
+}
+
+Table "vault"."secrets" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "name" text [unique]
+  "description" text [not null, default: '']
+  "secret" text [not null]
+  "key_id" uuid [default: `(pgsodium.create_key()).id`]
+  "nonce" bytea [default: `pgsodium.crypto_aead_det_noncegen()`]
+  "created_at" timestamptz [not null, default: `CURRENT_TIMESTAMP`]
+  "updated_at" timestamptz [not null, default: `CURRENT_TIMESTAMP`]
+  Note: 'Table with encrypted `secret` column for storing sensitive information on disk.'
+}

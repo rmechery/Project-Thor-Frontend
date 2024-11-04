@@ -45,19 +45,19 @@ export type Database = {
         Row: {
           content: string | null
           embedding: string | null
-          id: number
+          id: string
           metadata: Json | null
         }
         Insert: {
           content?: string | null
           embedding?: string | null
-          id?: number
+          id?: string
           metadata?: Json | null
         }
         Update: {
           content?: string | null
           embedding?: string | null
-          id?: number
+          id?: string
           metadata?: Json | null
         }
         Relationships: []
@@ -82,11 +82,10 @@ export type Database = {
       match_documents: {
         Args: {
           query_embedding: string
-          match_count?: number
           filter?: Json
         }
         Returns: {
-          id: number
+          id: string
           content: string
           metadata: Json
           similarity: number

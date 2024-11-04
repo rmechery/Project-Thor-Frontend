@@ -94,6 +94,7 @@ const handleRequest = async ({
           Array.from(
             matches.reduce((map, match) => {
               const metadata = match.metadata as Metadata;
+              console.log('METADATA ' + metadata.text);
               const { text, url } = metadata;
               if (!map.has(url)) {
                 map.set(url, text);

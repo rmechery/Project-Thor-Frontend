@@ -23,7 +23,8 @@ import {
   ThemeSupa,
 } from "@supabase/auth-ui-shared";
 
-import styles from "@chatscope/chat-ui-kit-styles/dist/default/styles.min.css";
+// import styles from "@chatscope/chat-ui-kit-styles/dist/default/styles.min.css";
+// import styles from "../styles/main.scss";
 
 type ConversationEntry = {
   message: string;
@@ -59,16 +60,44 @@ const updateChatbotMessage = (
       ];
 };
 
+async function loadConversationLogs(userId: string): Promise<ConversationEntry[]> {
+  try {
+    // Fetch conversation logs from Supabase
+    const { data, error } = await supabaseBrowserClient
+      .from("conversations")
+      .select("id, entry, speaker, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+
+    // Transform data into ConversationEntry type
+    const messages: ConversationEntry[] = data.map((entry) => ({
+      message: entry.entry ?? "", // Set default to empty string if entry is null
+      speaker: entry.speaker === "user" ? "user" : "bot",
+      date: new Date(entry.created_at),
+      id: entry.id,
+    }));
+
+    return messages;
+  } catch (error) {
+    console.error("Error loading conversation logs:", error);
+    return [];
+  }
+}
+
+// Function to sign the user out
+const signOut = async () => {
+  await supabaseBrowserClient.auth.signOut()
+};
+
+
 export default function Home() {
   const [text, setText] = useState("");
   const [conversation, setConversation] = useState<ConversationEntry[]>([]);
   const [botIsTyping, setBotIsTyping] = useState(false);
   const [statusMessage, setStatusMessage] = useState("Waiting for query...");
   const [userId, setUserId] = useState<string | undefined>();
-  // Function to sign the user out
-  const signOut = async () => {
-    await supabaseBrowserClient.auth.signOut()
-  };
 
   useEffect(() => {
     supabaseBrowserClient.auth.getSession().then(({ data: { session } }) => {
@@ -78,6 +107,7 @@ export default function Home() {
         );
       } else {
         setUserId(session?.user.id);
+        loadConversationLogs(session.user.id).then(setConversation);
       }
     });
   }, []);
@@ -135,6 +165,16 @@ export default function Home() {
     setText("");
   };
 
+  const clearConversation = async () => {
+    await supabaseBrowserClient
+      .from("conversations")
+      .delete()
+      .eq("user_id", userId)
+      .throwOnError();    
+    
+    setConversation([]);
+  };
+
   return (
     <>
       <Head>
@@ -143,7 +183,7 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <main className={styles.main}>
+      <main >
         <div
           style={{ position: "relative", height: "98vh", overflow: "hidden" }}
         >
@@ -156,6 +196,12 @@ export default function Home() {
                   info={statusMessage}
                 />
                 <ConversationHeader.Actions>
+                <Button 
+                  style={{ padding: "0.25em" }}
+                  onClick={clearConversation}
+                   border>
+                    Clear Conversation
+                  </Button>
                   <Button 
                   style={{ padding: "0.25em" }}
                    onClick={signOut} border>

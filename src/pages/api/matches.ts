@@ -5,7 +5,10 @@ import { SupabaseVectorStore } from "@langchain/community/vectorstores/supabase"
 export type Metadata = {
   url: string;
   text: string;
-  chunk: string;
+  source: string;
+  seq_num: number;
+  section: string
+  content_type: string;
 };
 
 const getMatchesFromEmbeddings = async (
@@ -24,7 +27,10 @@ const getMatchesFromEmbeddings = async (
     return (
       queryResult.map((match) => ({
         ...match,
-        metadata: match.metadata as Metadata,
+        metadata: {
+          ...match.metadata,        // keep existing metadata fields
+          text: match.pageContent || "",  // add the content into metadata["content"]
+        },
       })) || []
     );
   } catch (e) {

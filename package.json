@@ -28,6 +28,7 @@
     "react-markdown": "^8.0.5",
     "rehype-katex": "^6.0.2",
     "remark-math": "^5.1.1",
+    "sass": "^1.80.4",
     "timeago": "^1.6.7",
     "timeago.js": "^4.0.2",
     "turndown": "^7.1.1",

@@ -21,7 +21,7 @@ const parser = StructuredOutputParser.fromNamesAndDescriptions({
 const formatInstructions = parser.getFormatInstructions();
 
 const limiter = new Bottleneck({
-  minTime: 100, //old 5050
+  minTime: 5050, //old 5050
 });
 
 console.log(summarizerDocumentTemplate.length);
